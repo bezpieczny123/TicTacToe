@@ -17,6 +17,7 @@ add_subdirectory(vendored/SDL EXCLUDE_FROM_ALL)
 # Create your game executable target as usual
 add_executable(hello WIN32 main.cpp
         board.hpp
+        board.cpp
         ai.hpp
         ai.cpp)
 

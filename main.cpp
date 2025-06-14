@@ -7,22 +7,28 @@ enum class GameState { PLAYING, GAME_OVER };
 
 constexpr int WINDOW_W = 1200;
 constexpr int WINDOW_H = 1200;
-constexpr int BOARD_SIZE = 5;
+constexpr int BOARD_SIZE = 3;
 
 class Game {
 public:
     Game(int boardSize, int windowWidth, int windowHeight)
         : board(boardSize), state(GameState::PLAYING), playerTurn(false), winner(0),
-          window(nullptr), renderer(nullptr), windowWidth(windowWidth), windowHeight(windowHeight),
+          window(nullptr), renderer(nullptr), gameOverTexture(nullptr),
+          windowWidth(windowWidth), windowHeight(windowHeight),
           cellW(windowWidth / boardSize), cellH(windowHeight / boardSize),
-          btn{ windowWidth / 2.0f - 100.0f, windowHeight / 2.0f + 20.0f, 200.0f, 50.0f }
+          btn{ windowWidth / 2.0f - 100.0f, windowHeight / 2.0f - 100.0f, 200.0f, 200.0f }
     {
         SDL_Init(SDL_INIT_VIDEO);
         window = SDL_CreateWindow("TicTacToe SDL3", windowWidth, windowHeight, 0);
         renderer = SDL_CreateRenderer(window, nullptr);
+
+        loadGameOverImage("restart.bmp");
     }
 
     ~Game() {
+        if (gameOverTexture) {
+            SDL_DestroyTexture(gameOverTexture);
+        }
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);
         SDL_Quit();
@@ -40,6 +46,21 @@ public:
     }
 
 private:
+    void loadGameOverImage(const char* filename) {
+        SDL_Surface* surface = SDL_LoadBMP(filename);
+        if (!surface) {
+            SDL_Log("Failed to load BMP image %s: %s", filename, SDL_GetError());
+            return;
+        }
+
+        gameOverTexture = SDL_CreateTextureFromSurface(renderer, surface);
+        if (!gameOverTexture) {
+            SDL_Log("Failed to create texture from surface: %s", SDL_GetError());
+        }
+
+        SDL_DestroySurface(surface);
+    }
+
     void handleEvents(bool& running) {
         SDL_Event e;
         while (SDL_PollEvent(&e)) {
@@ -115,15 +136,34 @@ private:
     }
 
     void renderGameOver() {
-        if (winner == Board::X) SDL_SetRenderDrawColor(renderer, 0, 200, 0, 255);
-        else if (winner == Board::O) SDL_SetRenderDrawColor(renderer, 200, 0, 0, 255);
-        else SDL_SetRenderDrawColor(renderer, 0, 0, 200, 255);
+        SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
         SDL_RenderClear(renderer);
+        SDL_SetRenderDrawColor(renderer, 200, 200, 200, 255);
+        drawGrid();
+        drawBoard();
 
-        SDL_SetRenderDrawColor(renderer, 100, 100, 200, 255);
-        SDL_RenderFillRect(renderer, &btn);
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-        SDL_RenderRect(renderer, &btn);
+        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+        if (winner == Board::X) SDL_SetRenderDrawColor(renderer, 0, 200, 0, 64);
+        else if (winner == Board::O) SDL_SetRenderDrawColor(renderer, 200, 0, 0, 64);
+        else SDL_SetRenderDrawColor(renderer, 0, 0, 200, 64);
+
+        SDL_FRect fullScreen = {0, 0, (float)windowWidth, (float)windowHeight};
+        SDL_RenderFillRect(renderer, &fullScreen);
+
+        if (gameOverTexture) {
+            SDL_SetTextureBlendMode(gameOverTexture, SDL_BLENDMODE_BLEND);
+            SDL_SetTextureAlphaMod(gameOverTexture, 220);
+
+            SDL_FRect imageRect = btn;
+            SDL_RenderTexture(renderer, gameOverTexture, nullptr, &imageRect);
+        } else {
+            SDL_SetRenderDrawColor(renderer, 100, 100, 200, 180);
+            SDL_RenderFillRect(renderer, &btn);
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+            SDL_RenderRect(renderer, &btn);
+        }
+
+        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
     }
 
     void reset() {
@@ -140,6 +180,7 @@ private:
     int winner;
     SDL_Window* window;
     SDL_Renderer* renderer;
+    SDL_Texture* gameOverTexture;
     int windowWidth;
     int windowHeight;
     int cellW;
