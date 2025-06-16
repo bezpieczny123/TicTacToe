@@ -6,7 +6,7 @@ class Board {
 public:
     enum Cell { EMPTY = 0, X = 1, O = 2 };
 
-    explicit Board(int n) : size(n), cells(n * n, EMPTY) {}
+    explicit Board(const int n) : size(n), cells(n * n, EMPTY) {}
 
     bool makeMove(int idx, Cell p);
 

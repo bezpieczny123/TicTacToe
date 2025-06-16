@@ -5,8 +5,6 @@
 #include <random>
 #include <chrono>
 
-const int MAX_AI_DEPTH = 6;
-
 namespace {
     std::mt19937 rng(std::chrono::steady_clock::now().time_since_epoch().count());
 
@@ -41,20 +39,22 @@ namespace {
         return (winner == player);
     }
 
-    int minimax_ab(Board board, int depth, bool maximizingPlayer, int alpha, int beta) {
+    int minimax_ab(Board board, int depth, bool maximizingPlayer, int alpha, int beta, Board::Cell aiPlayer) {
+        int maxDepth = std::max(1, 30 / board.size);
+
         int winner = board.checkWin();
-        if (winner == Board::O) return 1000 - depth;
-        if (winner == Board::X) return -1000 + depth;
+        if (winner == aiPlayer) return 1000 - depth;
+        if (winner != Board::EMPTY && winner != aiPlayer) return -1000 + depth;
         if (board.isFull()) return 0;
-        if (depth >= MAX_AI_DEPTH) return 0;
+        if (depth >= maxDepth) return 0;
 
         if (maximizingPlayer) {
             int maxEval = std::numeric_limits<int>::min();
             for (int i = 0; i < board.size * board.size; ++i) {
                 if (board.cells[i] == Board::EMPTY) {
                     Board nextBoard = board;
-                    nextBoard.makeMove(i, Board::O);
-                    int eval = minimax_ab(nextBoard, depth + 1, true, alpha, beta);
+                    nextBoard.makeMove(i, aiPlayer);
+                    int eval = minimax_ab(nextBoard, depth + 1, false, alpha, beta, aiPlayer);
                     maxEval = std::max(maxEval, eval);
                     alpha = std::max(alpha, eval);
                     if (beta <= alpha) break;
@@ -63,11 +63,12 @@ namespace {
             return maxEval;
         } else {
             int minEval = std::numeric_limits<int>::max();
+            Board::Cell opponent = (aiPlayer == Board::O) ? Board::X : Board::O;
             for (int i = 0; i < board.size * board.size; ++i) {
                 if (board.cells[i] == Board::EMPTY) {
                     Board nextBoard = board;
-                    nextBoard.makeMove(i, Board::X);
-                    int eval = minimax_ab(nextBoard, depth + 1, false, alpha, beta);
+                    nextBoard.makeMove(i, opponent);
+                    int eval = minimax_ab(nextBoard, depth + 1, true, alpha, beta, aiPlayer);
                     minEval = std::min(minEval, eval);
                     beta = std::min(beta, eval);
                     if (beta <= alpha) break;
@@ -78,21 +79,23 @@ namespace {
     }
 }
 
-int AI::findBest(const Board& board) {
+int AI::findBest(const Board& board, Board::Cell aiPlayer) {
     std::vector<int> availableMoves;
     for (int i = 0; i < board.size * board.size; ++i) {
         if (board.cells[i] == Board::EMPTY) availableMoves.push_back(i);
     }
     if (availableMoves.empty()) return -1;
 
+    Board::Cell opponent = (aiPlayer == Board::O) ? Board::X : Board::O;
+
     for (int move : availableMoves) {
-        if (wouldWin(board, move, Board::O)) {
+        if (wouldWin(board, move, aiPlayer)) {
             return move;
         }
     }
 
     for (int move : availableMoves) {
-        if (wouldWin(board, move, Board::X)) {
+        if (wouldWin(board, move, opponent)) {
             return move;
         }
     }
@@ -101,9 +104,9 @@ int AI::findBest(const Board& board) {
     int bestScore = std::numeric_limits<int>::min();
     for (int move : availableMoves) {
         Board nextBoard = board;
-        nextBoard.makeMove(move, Board::O);
-        int score = minimax_ab(nextBoard, 0, true, std::numeric_limits<int>::min(), std::numeric_limits<int>::max());
-        score += evaluatePosition(board, move);
+        nextBoard.makeMove(move, aiPlayer);
+        int score = minimax_ab(nextBoard, 0, false, std::numeric_limits<int>::min(), std::numeric_limits<int>::max(), aiPlayer);
+        //score += evaluatePosition(board, move);
         moveScores.push_back(score);
         bestScore = std::max(bestScore, score);
     }

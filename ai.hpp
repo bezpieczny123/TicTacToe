@@ -3,5 +3,5 @@
 
 class AI {
 public:
-    static int findBest(const Board& board);
+    static int findBest(const Board& board, Board::Cell aiPlayer);
 };

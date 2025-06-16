@@ -3,16 +3,17 @@
 #include "ai.hpp"
 #include <cmath>
 
-enum class GameState { PLAYING, GAME_OVER };
+constexpr int WINDOW_W = 1500;
+constexpr int WINDOW_H = 1500;
+constexpr int BOARD_SIZE = 12; // rozmiar planszy (3x3, 5x5, 7x7 itp.)
+constexpr bool PLAYER_STARTS = true;  // kto zaczyna grę, gracz czy AI (true = gracz, false = AI)
 
-constexpr int WINDOW_W = 1200;
-constexpr int WINDOW_H = 1200;
-constexpr int BOARD_SIZE = 3;
+enum class GameState { PLAYING, GAME_OVER };
 
 class Game {
 public:
     Game(int boardSize, int windowWidth, int windowHeight)
-        : board(boardSize), state(GameState::PLAYING), playerTurn(false), winner(0),
+        : board(boardSize), state(GameState::PLAYING), playerTurn(PLAYER_STARTS), winner(0),
           window(nullptr), renderer(nullptr), gameOverTexture(nullptr),
           windowWidth(windowWidth), windowHeight(windowHeight),
           cellW(windowWidth / boardSize), cellH(windowHeight / boardSize),
@@ -84,7 +85,7 @@ private:
 
     void update() {
         if (!playerTurn && !board.isFull() && !board.checkWin()) {
-            int mv = AI::findBest(board);
+            int mv = AI::findBest(board, PLAYER_STARTS ? Board::X : Board::O);
             board.makeMove(mv, Board::O);
             playerTurn = true;
         }
@@ -169,7 +170,7 @@ private:
     void reset() {
         board = Board(board.size);
         state = GameState::PLAYING;
-        playerTurn = false;
+        playerTurn = PLAYER_STARTS;
         winner = 0;
     }
 
